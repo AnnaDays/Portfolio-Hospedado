@@ -1,229 +1,310 @@
-// Navegação mobile
-const burger = document.querySelector('.burger');
-const nav = document.querySelector('.nav-links');
-const navLinks = document.querySelectorAll('.nav-links li');
+// Menu mobile
+const menuToggle = document.querySelector('.menu-toggle');
+const navLinks = document.querySelector('.nav-links');
 
-burger.addEventListener('click', () => {
-    // Toggle Nav
-    nav.classList.toggle('active');
-    
-    // Animate Links
-    navLinks.forEach((link, index) => {
-        if (link.style.animation) {
-            link.style.animation = '';
-        } else {
-            link.style.animation = `navLinkFade 0.5s ease forwards ${index / 7 + 0.3}s`;
-        }
-    });
-    
-    // Burger Animation
-    burger.classList.toggle('toggle');
-});
+if (menuToggle && navLinks) {
+  menuToggle.addEventListener('click', () => {
+    const isOpen = navLinks.classList.toggle('open');
+    menuToggle.classList.toggle('active', isOpen);
+    menuToggle.setAttribute('aria-expanded', String(isOpen));
+    menuToggle.setAttribute('aria-label', isOpen ? 'Fechar menu' : 'Abrir menu');
+  });
 
-// Fechar menu ao clicar em um link
-navLinks.forEach(link => {
+  navLinks.querySelectorAll('a').forEach((link) => {
     link.addEventListener('click', () => {
-        nav.classList.remove('active');
-        burger.classList.remove('toggle');
-        navLinks.forEach(link => {
-            link.style.animation = '';
+      navLinks.classList.remove('open');
+      menuToggle.classList.remove('active');
+      menuToggle.setAttribute('aria-expanded', 'false');
+      menuToggle.setAttribute('aria-label', 'Abrir menu');
+    });
+  });
+
+  document.addEventListener('click', (event) => {
+    if (!navLinks.contains(event.target) && !menuToggle.contains(event.target)) {
+      navLinks.classList.remove('open');
+      menuToggle.classList.remove('active');
+      menuToggle.setAttribute('aria-expanded', 'false');
+      menuToggle.setAttribute('aria-label', 'Abrir menu');
+    }
+  });
+}
+
+// Efeito do cabeçalho ao rolar a página
+const header = document.querySelector('.site-header');
+
+function updateHeader() {
+  if (header) header.classList.toggle('scrolled', window.scrollY > 30);
+}
+
+window.addEventListener('scroll', updateHeader, { passive: true });
+updateHeader();
+
+// Animação de entrada das seções
+const revealElements = document.querySelectorAll('.reveal');
+
+if ('IntersectionObserver' in window) {
+  const revealObserver = new IntersectionObserver((entries, observer) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12 });
+
+  revealElements.forEach((element) => revealObserver.observe(element));
+} else {
+  revealElements.forEach((element) => element.classList.add('visible'));
+}
+
+// Carrosséis dos projetos
+document.querySelectorAll('.project-carousel').forEach((carousel) => {
+  const track = carousel.querySelector('.carousel-track');
+  const slides = Array.from(carousel.querySelectorAll('.carousel-slide'));
+  const prevButton = carousel.querySelector('.carousel-btn.prev');
+  const nextButton = carousel.querySelector('.carousel-btn.next');
+  const dotsContainer = carousel.querySelector('.carousel-dots');
+
+  if (!track || slides.length === 0) return;
+
+  let currentSlide = 0;
+  let autoplay = null;
+  const hasMultipleSlides = slides.length > 1;
+
+  function goToSlide(index) {
+    currentSlide = (index + slides.length) % slides.length;
+    track.style.transform = `translateX(-${currentSlide * 100}%)`;
+
+    if (dotsContainer) {
+      dotsContainer.querySelectorAll('.carousel-dot').forEach((dot, dotIndex) => {
+        dot.classList.toggle('active', dotIndex === currentSlide);
+        dot.setAttribute('aria-current', dotIndex === currentSlide ? 'true' : 'false');
+      });
+    }
+  }
+
+  function stopAutoplay() {
+    if (autoplay) {
+      clearInterval(autoplay);
+      autoplay = null;
+    }
+  }
+
+  function startAutoplay() {
+    stopAutoplay();
+    if (hasMultipleSlides && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      autoplay = setInterval(() => goToSlide(currentSlide + 1), 6000);
+    }
+  }
+
+  if (hasMultipleSlides) {
+    if (dotsContainer) {
+      slides.forEach((_, index) => {
+        const dot = document.createElement('button');
+        dot.type = 'button';
+        dot.className = `carousel-dot${index === 0 ? ' active' : ''}`;
+        dot.setAttribute('aria-label', `Ir para imagem ${index + 1}`);
+        dot.addEventListener('click', () => {
+          goToSlide(index);
+          startAutoplay();
         });
-    });
-});
-
-// Carrossel de projetos
-function initializeCarousels() {
-    document.querySelectorAll('.project-carousel').forEach((carousel) => {
-        const container = carousel.querySelector('.carousel-container');
-        const slides = carousel.querySelectorAll('.carousel-slide');
-        const prevBtn = carousel.querySelector('.carousel-prev');
-        const nextBtn = carousel.querySelector('.carousel-next');
-        const indicatorsContainer = carousel.querySelector('.carousel-indicators');
-        
-        let currentSlide = 0;
-        const totalSlides = slides.length;
-        let autoPlayInterval;
-        
-        // Criar indicadores
-        if (indicatorsContainer && totalSlides > 1) {
-            indicatorsContainer.innerHTML = '';
-            slides.forEach((_, i) => {
-                const indicator = document.createElement('div');
-                indicator.classList.add('carousel-indicator');
-                if (i === 0) indicator.classList.add('active');
-                indicator.addEventListener('click', () => {
-                    goToSlide(i);
-                });
-                indicatorsContainer.appendChild(indicator);
-            });
-        }
-        
-        const indicators = indicatorsContainer ? indicatorsContainer.querySelectorAll('.carousel-indicator') : [];
-        
-        // Função para ir para um slide específico
-        function goToSlide(slideIndex) {
-            // Atualizar slide atual
-            currentSlide = slideIndex;
-            
-            // Mover o container
-            container.style.transform = `translateX(-${currentSlide * 100}%)`;
-            
-            // Atualizar indicadores
-            indicators.forEach((indicator, i) => {
-                if (i === currentSlide) {
-                    indicator.classList.add('active');
-                } else {
-                    indicator.classList.remove('active');
-                }
-            });
-        }
-        
-        // Event listeners para os botões (apenas se houver mais de um slide)
-        if (totalSlides > 1) {
-            if (nextBtn) {
-                nextBtn.addEventListener('click', () => {
-                    const nextIndex = (currentSlide + 1) % totalSlides;
-                    goToSlide(nextIndex);
-                    resetAutoPlay();
-                });
-            }
-            
-            if (prevBtn) {
-                prevBtn.addEventListener('click', () => {
-                    const prevIndex = (currentSlide - 1 + totalSlides) % totalSlides;
-                    goToSlide(prevIndex);
-                    resetAutoPlay();
-                });
-            }
-            
-            // Iniciar autoplay
-            function startAutoPlay() {
-                if (totalSlides > 1) {
-                    autoPlayInterval = setInterval(() => {
-                        const nextIndex = (currentSlide + 1) % totalSlides;
-                        goToSlide(nextIndex);
-                    }, 5000);
-                }
-            }
-            
-            function resetAutoPlay() {
-                clearInterval(autoPlayInterval);
-                startAutoPlay();
-            }
-            
-            startAutoPlay();
-            
-            // Pausar autoplay ao passar o mouse
-            carousel.addEventListener('mouseenter', () => {
-                clearInterval(autoPlayInterval);
-            });
-            
-            // Retomar autoplay ao remover o mouse
-            carousel.addEventListener('mouseleave', () => {
-                startAutoPlay();
-            });
-        } else {
-            // Se houver apenas um slide, esconder controles
-            if (prevBtn) prevBtn.style.display = 'none';
-            if (nextBtn) nextBtn.style.display = 'none';
-            if (indicatorsContainer) indicatorsContainer.style.display = 'none';
-        }
-    });
-}
-
-// Inicializar carrosseis quando a página carregar
-document.addEventListener('DOMContentLoaded', initializeCarousels);
-
-// Animação de revelação ao scroll
-function revealOnScroll() {
-    const reveals = document.querySelectorAll('.reveal');
-    
-    for (let i = 0; i < reveals.length; i++) {
-        const windowHeight = window.innerHeight;
-        const elementTop = reveals[i].getBoundingClientRect().top;
-        const elementVisible = 150;
-        
-        if (elementTop < windowHeight - elementVisible) {
-            reveals[i].classList.add('active');
-        }
+        dotsContainer.appendChild(dot);
+      });
     }
-}
 
-window.addEventListener('scroll', revealOnScroll);
-window.addEventListener('load', revealOnScroll);
-
-// Navegação suave
-document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-        
-        const targetId = this.getAttribute('href');
-        if (targetId === '#') return;
-        
-        const targetElement = document.querySelector(targetId);
-        if (targetElement) {
-            const headerHeight = document.querySelector('header').offsetHeight;
-            const targetPosition = targetElement.getBoundingClientRect().top + window.pageYOffset - headerHeight;
-            
-            window.scrollTo({
-                top: targetPosition,
-                behavior: 'smooth'
-            });
-        }
-    });
-});
-
-// Formulário de contato
-const contactForm = document.querySelector('.contact-form');
-if (contactForm) {
-    contactForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        // Simulação de envio
-        const formData = new FormData(this);
-        const formObject = Object.fromEntries(formData);
-        
-        // Aqui você normalmente faria uma requisição AJAX
-        console.log('Dados do formulário:', formObject);
-        
-        // Feedback visual
-        const submitBtn = this.querySelector('button[type="submit"]');
-        const originalText = submitBtn.textContent;
-        
-        submitBtn.textContent = 'Enviando...';
-        submitBtn.disabled = true;
-        
-        setTimeout(() => {
-            alert('Mensagem enviada com sucesso! Entrarei em contato em breve.');
-            this.reset();
-            submitBtn.textContent = originalText;
-            submitBtn.disabled = false;
-        }, 1500);
-    });
-}
-
-// Header scroll effect
-window.addEventListener('scroll', () => {
-    const header = document.querySelector('header');
-    if (window.scrollY > 100) {
-        header.style.background = 'rgba(255, 255, 255, 0.98)';
-        header.style.boxShadow = '0 2px 20px rgba(0, 0, 0, 0.1)';
-    } else {
-        header.style.background = 'rgba(255, 255, 255, 0.95)';
-        header.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.1)';
+    if (prevButton) {
+      prevButton.addEventListener('click', () => {
+        goToSlide(currentSlide - 1);
+        startAutoplay();
+      });
     }
+
+    if (nextButton) {
+      nextButton.addEventListener('click', () => {
+        goToSlide(currentSlide + 1);
+        startAutoplay();
+      });
+    }
+
+    carousel.addEventListener('mouseenter', stopAutoplay);
+    carousel.addEventListener('mouseleave', startAutoplay);
+    carousel.addEventListener('focusin', stopAutoplay);
+    carousel.addEventListener('focusout', startAutoplay);
+    startAutoplay();
+  } else {
+    if (prevButton) prevButton.hidden = true;
+    if (nextButton) nextButton.hidden = true;
+    if (dotsContainer) dotsContainer.hidden = true;
+  }
 });
 
-// Animações dos progress bars dos idiomas
-document.addEventListener('DOMContentLoaded', function() {
-    const progressBars = document.querySelectorAll('.progress-bar');
-    
-    progressBars.forEach(bar => {
-        const width = bar.style.width;
-        bar.style.width = '0';
-        
-        setTimeout(() => {
-            bar.style.width = width;
-        }, 500);
+// Ano automático no rodapé
+const yearElement = document.querySelector('#current-year');
+if (yearElement) yearElement.textContent = new Date().getFullYear();
+
+
+// Terminal interativo: comandos executados no próprio navegador
+const terminalForm = document.querySelector('#terminal-form');
+const terminalInput = document.querySelector('#terminal-input');
+const terminalOutput = document.querySelector('#terminal-output');
+const terminalCommands = {
+  help: 'Comandos disponíveis: sobre, skills, experiencia, projetos, contato e clear.',
+  sobre: 'Sou a Ana Luiza: Cientista de Dados Jr., atleta natural Wellness, crocheteira, fã de The Last of Us e obcecada por The Walking Dead. Mãe da Marie e da Pitucha!',
+  skills: 'Python • SQL • PySpark • Databricks • Power BI • Excel • Pandas • NumPy • JavaScript • ETL • Pipelines',
+  experiencia: 'No Santander, comecei como estagiária em Ciência de Dados e evoluí para Cientista de Dados Jr. Atuei com pipelines, ETL, preparação e validação de dados, dashboards, indicadores e análises. Ferramentas: Python, SQL, PySpark, Databricks e Power BI.',
+  projetos: 'Tenho projetos web e mobile desenvolvidos durante minha formação. Role a página até a seção Projetos para conhecer cada um.',
+  contato: 'Vamos conversar? E-mail: analuizadias389@gmail.com | LinkedIn: linkedin.com/in/ana-luiza-dias-an0808/'
+};
+const commandHistory = [];
+let historyPosition = 0;
+
+function runTerminalCommand(rawCommand) {
+  const command = rawCommand.trim().toLowerCase();
+  if (!command || !terminalOutput) return;
+  const commandLine = document.createElement('p');
+  commandLine.className = 'terminal-line';
+  commandLine.textContent = `ana@portfolio:~$ ${command}`;
+  terminalOutput.appendChild(commandLine);
+
+  if (command === 'clear') {
+    terminalOutput.innerHTML = '<p class="terminal-welcome">Terminal limpo. Manda outro comando! ✨</p>';
+    return;
+  }
+
+  const response = terminalCommands[command];
+  const result = document.createElement('p');
+  result.className = response ? 'terminal-result' : 'terminal-error';
+  result.textContent = response || `Comando "${command}" não encontrado. Digite help para ver as opções.`;
+  terminalOutput.appendChild(result);
+  terminalOutput.scrollTop = terminalOutput.scrollHeight;
+}
+
+if (terminalForm && terminalInput && terminalOutput) {
+  terminalForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const command = terminalInput.value;
+    if (command.trim()) {
+      commandHistory.push(command);
+      historyPosition = commandHistory.length;
+      runTerminalCommand(command);
+      terminalInput.value = '';
+    }
+  });
+
+  terminalInput.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowUp' && commandHistory.length) {
+      event.preventDefault();
+      historyPosition = Math.max(0, historyPosition - 1);
+      terminalInput.value = commandHistory[historyPosition];
+    }
+    if (event.key === 'ArrowDown' && commandHistory.length) {
+      event.preventDefault();
+      historyPosition = Math.min(commandHistory.length, historyPosition + 1);
+      terminalInput.value = commandHistory[historyPosition] || '';
+    }
+  });
+
+  document.querySelectorAll('[data-command]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const command = button.dataset.command;
+      if (command === 'clear') {
+        runTerminalCommand('clear');
+      } else {
+        runTerminalCommand(command);
+      }
+      terminalInput.focus();
     });
-});
+  });
+}
+
+// Pequeno efeito de inclinação nos cards (desativado em telas touch)
+const supportsFinePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+if (supportsFinePointer && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  document.querySelectorAll('.project-card, .education-card').forEach((card) => {
+    card.addEventListener('pointermove', (event) => {
+      const bounds = card.getBoundingClientRect();
+      const x = (event.clientX - bounds.left) / bounds.width;
+      const y = (event.clientY - bounds.top) / bounds.height;
+      const rotateY = (x - 0.5) * 4;
+      const rotateX = (0.5 - y) * 4;
+      card.style.transform = `perspective(900px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-3px)`;
+    });
+    card.addEventListener('pointerleave', () => { card.style.transform = ''; });
+  });
+}
+
+
+// Mini laboratório de Python: executa código real no navegador com Pyodide.
+(() => {
+  const runButton = document.getElementById('python-run');
+  const resetButton = document.getElementById('python-reset');
+  const codeEditor = document.getElementById('python-code');
+  const output = document.getElementById('python-output');
+  const status = document.getElementById('python-status');
+  const runtime = document.getElementById('python-runtime');
+
+  if (!runButton || !codeEditor || !output) return;
+
+  const starterCode = codeEditor.value;
+  let pyodideInstance = null;
+  let loadingPromise = null;
+
+  const setStatus = (message, state = '') => {
+    status.innerHTML = `<b></b> ${message}`;
+    status.dataset.state = state;
+    runtime.textContent = message;
+  };
+
+  async function loadPython() {
+    if (pyodideInstance) return pyodideInstance;
+    if (loadingPromise) return loadingPromise;
+
+    loadingPromise = (async () => {
+      if (typeof loadPyodide !== 'function') {
+        throw new Error('Não consegui carregar o ambiente Python. Confira sua conexão e tente novamente.');
+      }
+      setStatus('CARREGANDO PYTHON...');
+      pyodideInstance = await loadPyodide();
+      return pyodideInstance;
+    })();
+
+    try {
+      return await loadingPromise;
+    } catch (error) {
+      loadingPromise = null;
+      throw error;
+    }
+  }
+
+  runButton.addEventListener('click', async () => {
+    runButton.disabled = true;
+    runButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Executando...';
+    output.classList.remove('error');
+    output.textContent = '';
+    setStatus('EXECUTANDO...');
+
+    try {
+      const pyodide = await loadPython();
+      let printed = '';
+      pyodide.setStdout({ batched: (message) => { printed += `${message}\n`; } });
+      pyodide.setStderr({ batched: (message) => { printed += `${message}\n`; } });
+      await pyodide.runPythonAsync(codeEditor.value);
+      output.textContent = printed.trim() || 'Código executado! (não houve saída porque não foi usado print.)';
+      setStatus('EXECUTADO COM SUCESSO', 'success');
+    } catch (error) {
+      output.classList.add('error');
+      output.textContent = error.message || String(error);
+      setStatus('ERRO NA EXECUÇÃO', 'error');
+    } finally {
+      runButton.disabled = false;
+      runButton.innerHTML = '<i class="fa-solid fa-play"></i> Executar Python';
+    }
+  });
+
+  resetButton?.addEventListener('click', () => {
+    codeEditor.value = starterCode;
+    output.classList.remove('error');
+    output.textContent = 'Exemplo restaurado. Clique em “Executar Python” para rodar.';
+    setStatus('PRONTO PARA RODAR');
+  });
+})();
